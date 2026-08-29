@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Aurix — Simulated Crypto Wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================= AUTH ============================= -->
+<div id="authView" class="auth-view">
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="34" height="34"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M9 23 L16 8 L23 23 M12.2 17.5 h7.6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div><h1>Aurix</h1><span class="sim-chip">SIMULATOR</span></div>
+    </div>
+
+    <div class="auth-card">
+      <!-- LOGIN -->
+      <section id="authLogin" class="auth-screen">
+        <h2>Welcome back</h2>
+        <p class="auth-sub">Sign in to your simulated wallet.</p>
+        <form id="loginForm" novalidate>
+          <label class="field"><span>Mobile or email</span>
+            <input id="loginId" type="text" autocomplete="username" placeholder="9876543210 or you@mail.com">
+          </label>
+          <label class="field"><span>Password</span>
+            <span class="pw-wrap"><input id="loginPw" type="password" autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="pw-toggle" data-target="loginPw" aria-label="Show password"><i data-lucide="eye"></i></button></span>
+          </label>
+          <div class="auth-row"><button type="button" class="link" id="gotoForgot">Forgot password?</button></div>
+          <button class="btn btn-primary btn-block" id="loginBtn" type="submit">Sign in</button>
+          <p class="form-err" id="loginErr" hidden></p>
+        </form>
+        <div class="auth-alt">New to Aurix? <button class="link" id="gotoSignup">Create an account</button></div>
+      </section>
+
+      <!-- SIGNUP -->
+      <section id="authSignup" class="auth-screen" hidden>
+        <button class="back-link link" id="signupBack"><i data-lucide="chevron-right" style="transform:rotate(180deg)"></i>Back to sign in</button>
+        <h2>Create account</h2>
+        <p class="auth-sub">Set up your demo wallet in seconds.</p>
+        <form id="signupForm" novalidate>
+          <label class="field"><span>Username</span><input id="suUser" placeholder="e.g. udit" maxlength="24"></label>
+          <label class="field"><span>Mobile number</span><input id="suMobile" type="tel" inputmode="numeric" placeholder="10-digit mobile"></label>
+          <label class="field"><span>Email <em>(optional)</em></span><input id="suEmail" type="email" placeholder="you@mail.com"></label>
+          <label class="field"><span>Password</span>
+            <span class="pw-wrap"><input id="suPw" type="password" placeholder="Min. 8 characters">
+            <button type="button" class="pw-toggle" data-target="suPw" aria-label="Show password"><i data-lucide="eye"></i></button></span>
+          </label>
+          <label class="field"><span>Confirm password</span><input id="suPw2" type="password" placeholder="Repeat password"></label>
+          <label class="check-row"><input type="checkbox" id="suTerms"><span>I understand this is a <b>simulation</b> and accept the demo terms. No real funds are involved.</span></label>
+          <button class="btn btn-primary btn-block" id="suBtn" type="submit">Create account</button>
+          <p class="form-err" id="signupErr" hidden></p>
+        </form>
+      </section>
+
+      <!-- FORGOT -->
+      <section id="authForgot" class="auth-screen" hidden>
+        <button class="back-link link" id="forgotBack"><i data-lucide="chevron-right" style="transform:rotate(180deg)"></i>Back to sign in</button>
+        <h2>Reset password</h2>
+        <p class="auth-sub">Enter your mobile or email. In this simulator, no real message is sent.</p>
+        <form id="forgotForm" novalidate>
+          <label class="field"><span>Mobile or email</span><input id="fpId" placeholder="Mobile or email"></label>
+          <button class="btn btn-primary btn-block" id="fpBtn" type="submit">Send reset link</button>
+        </form>
+      </section>
+    </div>
+
+    <p class="auth-disclaimer"><i data-lucide="shield-alert"></i>Simulation only — no real crypto, UPI or bank transfers ever occur.</p>
+  </div>
+</div>
+
+<!-- ============================= APP ============================= -->
+<div id="appView" hidden>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar-title" id="topbarTitle">Home</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="bellBtn" aria-label="Notifications"><i data-lucide="bell"></i><span class="badge" id="notifBadge" hidden></span></button>
+        <button class="avatar-btn" id="avatarBtn" aria-label="Profile"><span id="avatarInitials">··</span></button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- HOME -->
+      <section class="view" id="view-home">
+        <div id="announceBanner" class="announce" hidden></div>
+
+        <div class="portfolio-card">
+          <div class="pc-top"><span class="pc-label">Total Portfolio</span><span class="sim-dot">SIM</span></div>
+          <div class="pc-amount" id="pcTotal">₹0.00</div>
+          <div class="pc-change" id="pcChange"></div>
+          <div class="pc-chart"><canvas id="portfolioChart" height="132"></canvas></div>
+          <div class="pc-ranges">
+            <button data-range="24H" class="active">24H</button>
+            <button data-range="7D">7D</button>
+          </div>
+        </div>
+
+        <div class="quick-grid">
+          <button class="quick" id="qaSend"><i data-lucide="arrow-up-right"></i><span>Send</span></button>
+          <button class="quick" id="qaReceive"><i data-lucide="arrow-down-left"></i><span>Receive</span></button>
+          <button class="quick" id="qaWithdraw"><i data-lucide="landmark"></i><span>Withdraw</span></button>
+          <button class="quick" id="qaAddFunds"><i data-lucide="plus"></i><span>Add Funds</span></button>
+        </div>
+
+        <div class="sec-head"><h3>Holdings</h3><button class="link" data-goto="wallet">View all</button></div>
+        <div id="homeHoldings" class="asset-list"></div>
+
+        <div class="sec-head"><h3>Recent activity</h3><button class="link" data-goto="activity">See all</button></div>
+        <div id="homeActivity" class="tx-list"></div>
+      </section>
+
+      <!-- MARKETS -->
+      <section class="view" id="view-markets" hidden>
+        <label class="search-box"><i data-lucide="search"></i><input id="marketSearch" placeholder="Search coins"></label>
+        <div class="chip-row" id="marketChips">
+          <button class="chip active" data-mf="all">All</button>
+          <button class="chip" data-mf="trending">Trending</button>
+          <button class="chip" data-mf="gainers">Gainers</button>
+          <button class="chip" data-mf="losers">Losers</button>
+          <button class="chip" data-mf="watchlist">Watchlist</button>
+        </div>
+        <div id="marketList" class="asset-list"></div>
+      </section>
+
+      <!-- WALLET -->
+      <section class="view" id="view-wallet" hidden>
+        <div class="inr-card">
+          <div>
+            <span class="pc-label">Cash balance</span>
+            <div class="inr-amount" id="inrBalance">₹0.00</div>
+            <span class="muted small">Simulated INR · not real money</span>
+          </div>
+          <button class="btn btn-primary btn-sm" id="walletAddFunds"><i data-lucide="plus"></i>Add Funds</button>
+        </div>
+        <div class="sec-head"><h3>Crypto assets</h3></div>
+        <div id="walletList" class="asset-list"></div>
+      </section>
+
+      <!-- ACTIVITY -->
+      <section class="view" id="view-activity" hidden>
+        <div class="chip-row" id="activityChips">
+          <button class="chip active" data-af="all">All</button>
+          <button class="chip" data-af="sent">Sent</button>
+          <button class="chip" data-af="received">Received</button>
+          <button class="chip" data-af="withdrawal">Withdrawals</button>
+          <button class="chip" data-af="admin">Admin</button>
+        </div>
+        <div id="activityList" class="tx-list"></div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="view" id="view-profile" hidden>
+        <div id="profileCard"></div>
+        <div id="profileSettings"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-view="home"><i data-lucide="home"></i><span>Home</span></button>
+      <button class="nav-item" data-view="markets"><i data-lucide="chart-candlestick"></i><span>Markets</span></button>
+      <button class="nav-item nav-wallet" data-view="wallet"><span class="nav-fab"><i data-lucide="wallet"></i></span><span>Wallet</span></button>
+      <button class="nav-item" data-view="activity"><i data-lucide="activity"></i><span>Activity</span></button>
+      <button class="nav-item" data-view="profile"><i data-lucide="user"></i><span>Profile</span></button>
+    </nav>
+  </div>
+</div>
+
+<!-- ============================= SHEETS & OVERLAYS ============================= -->
+<div class="sheet-backdrop" id="sheetBackdrop" hidden></div>
+
+<div class="sheet" id="sheetSend" hidden>
+  <div class="sheet-head"><h3>Send crypto</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body">
+    <span class="lbl">Select coin</span>
+    <div class="coin-select" id="sendCoins"></div>
+    <label class="field"><span>Receiver wallet address</span><input id="sendAddr" class="mono" placeholder="0x…" autocomplete="off" spellcheck="false"></label>
+    <label class="field"><span>Amount</span>
+      <span class="amt-wrap"><input id="sendAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00"><button type="button" class="link" id="sendMax">MAX</button></span>
+    </label>
+    <label class="field"><span>Note <em>(optional)</em></span><input id="sendNote" maxlength="80" placeholder="What's this for?"></label>
+    <div class="sumbox" id="sendSummary"></div>
+    <p class="form-err" id="sendErr" hidden></p>
+    <button class="btn btn-primary btn-block" id="sendSubmit">Review &amp; send</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheetReceive" hidden>
+  <div class="sheet-head"><h3>Receive crypto</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body">
+    <div class="qr-wrap"><div id="qrBox"></div><span class="sim-chip">SIMULATED ADDRESS</span></div>
+    <span class="lbl">Your wallet address</span>
+    <div class="addr-box mono" id="recvAddr"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="recvCopy"><i data-lucide="copy"></i>Copy</button>
+      <button class="btn btn-ghost" id="recvShare"><i data-lucide="share-2"></i>Share</button>
+    </div>
+    <div class="note-card"><i data-lucide="info"></i><p>Share this address so other simulator users can send you demo assets. It exists only inside this application.</p></div>
+    <span class="lbl">Your holdings</span>
+    <div id="recvHoldings" class="asset-list compact"></div>
+  </div>
+</div>
+
+<div class="sheet" id="sheetWithdraw" hidden>
+  <div class="sheet-head"><h3>Withdraw</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body">
+    <span class="lbl">Select coin</span>
+    <div class="coin-select" id="wdCoins"></div>
+    <label class="field"><span>Amount</span>
+      <span class="amt-wrap"><input id="wdAmount" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00"><button type="button" class="link" id="wdMax">MAX</button></span>
+    </label>
+    <div class="sumbox" id="wdSummary"></div>
+    <span class="lbl">Withdrawal method</span>
+    <div class="seg" id="wdMethod">
+      <button data-m="UPI" class="active"><i data-lucide="smartphone"></i>UPI</button>
+      <button data-m="BANK"><i data-lucide="landmark"></i>Bank transfer</button>
+    </div>
+    <div id="wdUpi">
+      <label class="field"><span>UPI ID</span><input id="wdUpiId" class="mono" placeholder="username@upi"></label>
+    </div>
+    <div id="wdBank" hidden>
+      <label class="field"><span>Bank name</span><input id="wdBankName" placeholder="e.g. HDFC Bank"></label>
+      <label class="field"><span>Account holder name</span><input id="wdAcctHolder" placeholder="Full name"></label>
+      <label class="field"><span>Account number</span><input id="wdAcctNo" inputmode="numeric" placeholder="9–18 digits"></label>
+      <label class="field"><span>IFSC code</span><input id="wdIfsc" class="mono" placeholder="HDFC0001234"></label>
+    </div>
+    <div class="note-card"><i data-lucide="timer"></i><p>Payouts arrive in approximately <b>3 business days</b>. Crypto is deducted from your wallet immediately. This is a simulated payout — no real transfer occurs.</p></div>
+    <p class="form-err" id="wdErr" hidden></p>
+    <button class="btn btn-primary btn-block" id="wdSubmit">Submit withdrawal</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheetAddFunds" hidden>
+  <div class="sheet-head"><h3>Add funds</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body">
+    <label class="field"><span>Amount (₹)</span>
+      <span class="amt-wrap"><input id="afAmount" type="number" inputmode="decimal" min="1" step="any" placeholder="0"></span>
+    </label>
+    <div class="chip-row" id="afQuick">
+      <button class="chip" data-amt="500">₹500</button><button class="chip" data-amt="1000">₹1,000</button>
+      <button class="chip" data-amt="2000">₹2,000</button><button class="chip" data-amt="5000">₹5,000</button>
+    </div>
+    <span class="lbl">Payment method <em>(simulated)</em></span>
+    <div class="seg" id="afMethod">
+      <button data-m="UPI" class="active"><i data-lucide="smartphone"></i>UPI</button>
+      <button data-m="BANK"><i data-lucide="landmark"></i>Bank</button>
+    </div>
+    <div class="note-card"><i data-lucide="info"></i><p>Demo environment — demo INR is credited instantly. No real payment gateway is connected.</p></div>
+    <p class="form-err" id="afErr" hidden></p>
+    <button class="btn btn-primary btn-block" id="afSubmit">Add demo funds</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheetTx" hidden>
+  <div class="sheet-head"><h3>Transaction details</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body" id="txDetail"></div>
+</div>
+
+<div class="sheet" id="sheetNotifs" hidden>
+  <div class="sheet-head"><h3>Notifications</h3><button class="link" id="markAllRead">Mark all read</button></div>
+  <div class="sheet-body" id="notifList"></div>
+</div>
+
+<div class="sheet" id="sheetCoin" hidden>
+  <div class="sheet-head"><h3 id="coinDetailTitle">Coin</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body" id="coinDetail"></div>
+</div>
+
+<div class="sheet" id="sheetSecurity" hidden>
+  <div class="sheet-head"><h3>Security</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body" id="securityBody"></div>
+</div>
+
+<div class="sheet" id="sheetLang" hidden>
+  <div class="sheet-head"><h3>Language</h3><button class="icon-btn sheet-close"><i data-lucide="x"></i></button></div>
+  <div class="sheet-body">
+    <div class="lang-list" id="langList">
+      <button data-lang="en" class="lang-row active"><span>English</span><i data-lucide="check"></i></button>
+      <button data-lang="hi" class="lang-row"><span>हिन्दी</span><i data-lucide="check"></i></button>
+      <button data-lang="es" class="lang-row"><span>Español</span><i data-lucide="check"></i></button>
+    </div>
+    <div class="note-card"><i data-lucide="info"></i><p>Language preference is saved locally in this simulator; the interface translation is illustrative only.</p></div>
+  </div>
+</div>
+
+<div class="sheet sheet-sm" id="sheetConfirm" hidden>
+  <div class="sheet-body">
+    <h3 id="cfTitle">Confirm</h3>
+    <p id="cfMsg" class="muted"></p>
+    <div class="btn-row">
+      <button class="btn btn-ghost" id="cfCancel">Cancel</button>
+      <button class="btn btn-primary" id="cfOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Withdrawal success -->
+<div class="fullpage" id="wdSuccess" hidden>
+  <div class="wd-card">
+    <div class="wd-check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 15-16"/></svg></div>
+    <h2>Withdrawal Request Submitted</h2>
+    <p class="muted">Your withdrawal request has been successfully submitted.</p>
+    <div class="wd-amount" id="wdAmt"></div>
+    <div class="wd-est"><i data-lucide="calendar"></i><div><b id="wdEstDate"></b><span>Estimated arrival · ~3 business days</span></div></div>
+    <div class="timeline" id="wdTimeline"></div>
+    <p class="wd-note">Your crypto assets have been deducted from your wallet balance. Simulated payout — no real transfer occurs.</p>
+    <button class="btn btn-primary btn-block" id="wdDone">Done</button>
+  </div>
+</div>
+
+<!-- Transaction success -->
+<div class="fullpage" id="txSuccess" hidden>
+  <div class="txs-card">
+    <div class="wd-check small"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 15-16"/></svg></div>
+    <h3 id="txsTitle">Transaction submitted</h3>
+    <p class="muted" id="txsSub"></p>
+    <p class="mono small" id="txsHash"></p>
+  </div>
+</div>
+
+<div id="toastRoot"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
