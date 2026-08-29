@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aurix — Admin Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.462.0/dist/umd/lucide.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="admin-body">
+
+<!-- Admin login -->
+<div id="admAuth" class="adm-auth" hidden>
+  <div class="auth-wrap">
+    <div class="auth-brand">
+      <div class="brand-mark"><svg viewBox="0 0 32 32" width="34" height="34"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M9 23 L16 8 L23 23 M12.2 17.5 h7.6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><h1>Aurix Admin</h1><span class="sim-chip">SIMULATOR</span></div>
+    </div>
+    <div class="auth-card">
+      <section class="auth-screen">
+        <h2>Admin console</h2>
+        <p class="auth-sub">Restricted to administrator accounts.</p>
+        <form id="admLoginForm" novalidate>
+          <label class="field"><span>Mobile or email</span><input id="admId" autocomplete="username" placeholder="Admin mobile or email"></label>
+          <label class="field"><span>Password</span>
+            <span class="pw-wrap"><input id="admPw" type="password" autocomplete="current-password" placeholder="••••••••">
+            <button type="button" class="pw-toggle" data-target="admPw"><i data-lucide="eye"></i></button></span>
+          </label>
+          <button class="btn btn-primary btn-block" id="admLoginBtn" type="submit">Sign in</button>
+          <p class="form-err" id="admLoginErr" hidden></p>
+        </form>
+      </section>
+    </div>
+    <p class="auth-disclaimer"><i data-lucide="shield-alert"></i>Simulation console. Admins control demo balances only.</p>
+  </div>
+</div>
+
+<!-- Unauthorized -->
+<div id="admUnauthorized" class="adm-auth" hidden>
+  <div class="auth-wrap"><div class="auth-card unauth-card">
+    <div class="unauth-icon"><i data-lucide="shield-alert"></i></div>
+    <h2>Unauthorized Access</h2>
+    <p class="muted">This console is restricted to accounts with the <b>admin</b> role. Your current account does not have administrator privileges.</p>
+    <button class="btn btn-ghost btn-block" id="admUnauthBack">Back</button>
+  </div></div>
+</div>
+
+<!-- Admin app -->
+<div id="admApp" hidden>
+  <aside class="side" id="admSide">
+    <div class="side-brand">
+      <div class="brand-mark sm"><svg viewBox="0 0 32 32" width="26" height="26"><rect width="32" height="32" rx="9" fill="var(--accent)"/><path d="M9 23 L16 8 L23 23 M12.2 17.5 h7.6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div><b>Aurix</b><span class="side-sub">Admin console</span></div>
+    </div>
+    <nav class="side-nav">
+      <button class="side-item active" data-sec="dashboard"><i data-lucide="layout-dashboard"></i>Dashboard</button>
+      <button class="side-item" data-sec="users"><i data-lucide="users"></i>Users</button>
+      <button class="side-item" data-sec="wallets"><i data-lucide="wallet"></i>Wallet management</button>
+      <button class="side-item" data-sec="withdrawals"><i data-lucide="landmark"></i>Withdrawals</button>
+      <button class="side-item" data-sec="transactions"><i data-lucide="arrow-left-right"></i>Transactions</button>
+      <button class="side-item" data-sec="notifications"><i data-lucide="bell"></i>Notifications</button>
+      <button class="side-item" data-sec="announcements"><i data-lucide="megaphone"></i>Announcements</button>
+      <button class="side-item" data-sec="settings"><i data-lucide="settings"></i>Settings</button>
+    </nav>
+    <div class="side-foot">
+      <div class="side-admin"><span class="avatar-btn static" id="admAvatar">A</span><div><b id="admName">Admin</b><span class="side-sub">Administrator</span></div></div>
+      <button class="btn btn-ghost btn-sm btn-block" id="admLogout"><i data-lucide="log-out"></i>Log out</button>
+    </div>
+  </aside>
+  <div class="side-scrim" id="admSideScrim" hidden></div>
+
+  <div class="adm-main">
+    <header class="adm-top">
+      <button class="icon-btn" id="admBurger" aria-label="Menu"><i data-lucide="list"></i></button>
+      <h2 id="admTitle">Dashboard</h2>
+      <div class="adm-top-right">
+        <span class="sim-chip">SIMULATOR</span>
+        <button class="icon-btn" id="admThemeBtn"><i data-lucide="moon"></i></button>
+      </div>
+    </header>
+
+    <div class="adm-content">
+      <section id="sec-dashboard" class="adm-sec">
+        <div class="stat-grid" id="admStats"></div>
+        <div class="chart-grid">
+          <div class="panel"><h3>User growth</h3><div class="chart-box"><canvas id="chUsers"></canvas></div></div>
+          <div class="panel"><h3>Transaction activity</h3><div class="chart-box"><canvas id="chTxs"></canvas></div></div>
+          <div class="panel"><h3>Withdrawal status</h3><div class="chart-box"><canvas id="chWd"></canvas></div></div>
+        </div>
+        <div class="panel"><h3>Recent withdrawals</h3><div id="admRecentWd"></div></div>
+      </section>
+
+      <section id="sec-users" class="adm-sec" hidden>
+        <div class="toolbar">
+          <label class="search-box"><i data-lucide="search"></i><input id="admUserSearch" placeholder="Search username, email, mobile"></label>
+          <div class="chip-row" id="admUserChips">
+            <button class="chip active" data-uf="all">All</button>
+            <button class="chip" data-uf="active">Active</button>
+            <button class="chip" data-uf="disabled">Disabled</button>
+            <button class="chip" data-uf="admin">Admins</button>
+          </div>
+        </div>
+        <div class="panel table-panel"><div id="admUserTable"></div></div>
+      </section>
+
+      <section id="sec-wallets" class="adm-sec" hidden>
+        <div class="toolbar">
+          <label class="search-box"><i data-lucide="search"></i><input id="admWalletSearch" placeholder="Search user"></label>
+        </div>
+        <div class="panel table-panel"><div id="admWalletTable"></div></div>
+      </section>
+
+      <section id="sec-withdrawals" class="adm-sec" hidden>
+        <div class="toolbar">
+          <label class="search-box"><i data-lucide="search"></i><input id="admWdSearch" placeholder="Search user"></label>
+          <div class="chip-row" id="admWdChips">
+            <button class="chip active" data-wf="all">All</button>
+            <button class="chip" data-wf="Processing">Processing</button>
+            <button class="chip" data-wf="Completed">Completed</button>
+            <button class="chip" data-wf="Failed">Failed</button>
+            <button class="chip" data-wf="Rejected">Rejected</button>
+          </div>
+          <select id="admWdMethod" class="select-sm"><option value="all">All methods</option><option>UPI</option><option>BANK</option></select>
+        </div>
+        <div class="panel table-panel"><div id="admWdTable"></div></div>
+      </section>
+
+      <section id="sec-transactions" class="adm-sec" hidden>
+        <div class="toolbar">
+          <label class="search-box"><i data-lucide="search"></i><input id="admTxSearch" placeholder="Search by TX hash or username"></label>
+          <div class="filter-row">
+            <select id="admTxCoin" class="select-sm"><option value="all">All coins</option></select>
+            <select id="admTxStatus" class="select-sm"><option value="all">All status</option><option>Processing</option><option>Completed</option><option>Failed</option><option>Rejected</option></select>
+            <select id="admTxType" class="select-sm"><option value="all">All types</option><option>sent</option><option>received</option><option>withdrawal</option><option>admin_credit</option><option>admin_debit</option></select>
+          </div>
+        </div>
+        <div class="panel table-panel"><div id="admTxTable"></div></div>
+      </section>
+
+      <section id="sec-notifications" class="adm-sec" hidden>
+        <div class="split">
+          <div class="panel">
+            <h3>Send notification</h3>
+            <label class="field"><span>Recipient</span>
+              <select id="admNfTarget"><option value="all">All users</option><option value="one">Individual user</option></select>
+            </label>
+            <label class="field" id="admNfUserWrap" hidden><span>User (username / mobile / email)</span><input id="admNfUser" placeholder="Start typing…"></label>
+            <div id="admNfUserPick" class="pick-list" hidden></div>
+            <label class="field"><span>Title</span><input id="admNfTitle" maxlength="60" placeholder="Notification title"></label>
+            <label class="field"><span>Message</span><textarea id="admNfMsg" rows="4" maxlength="300" placeholder="Message body"></textarea></label>
+            <button class="btn btn-primary" id="admNfSend">Send notification</button>
+          </div>
+          <div class="panel"><h3>Recently sent</h3><div id="admNfRecent"></div></div>
+        </div>
+      </section>
+
+      <section id="sec-announcements" class="adm-sec" hidden>
+        <div class="split">
+          <div class="panel">
+            <h3>New announcement</h3>
+            <label class="field"><span>Title</span><input id="anTitle" maxlength="60" placeholder="Announcement title"></label>
+            <label class="field"><span>Message</span><textarea id="anMsg" rows="4" maxlength="500" placeholder="Announcement body"></textarea></label>
+            <label class="field"><span>Type</span>
+              <select id="anType"><option>General</option><option>Market</option><option>Maintenance</option><option>Security</option></select>
+            </label>
+            <button class="btn btn-primary" id="anSend">Publish announcement</button>
+          </div>
+          <div class="panel"><h3>Published</h3><div id="admAnList"></div></div>
+        </div>
+      </section>
+
+      <section id="sec-settings" class="adm-sec" hidden>
+        <div class="split">
+          <div class="panel">
+            <h3>Environment</h3>
+            <div class="kv"><span>Supabase project</span><b class="mono" id="setProject">—</b></div>
+            <div class="kv"><span>Anon key</span><b class="mono" id="setKey">configured</b></div>
+            <div class="kv"><span>Realtime</span><b id="setRealtime">checking…</b></div>
+            <div class="kv"><span>Market feed</span><b id="setFeed">—</b></div>
+            <button class="btn btn-ghost btn-sm" id="admSyncPrices" style="margin-top:12px"><i data-lucide="refresh-cw"></i>Refresh market cache</button>
+          </div>
+          <div class="panel">
+            <h3>Simulated network fees</h3>
+            <div id="setFees"></div>
+            <div class="note-card" style="margin-top:14px"><i data-lucide="info"></i><p>The first admin is created via SQL: <code>select create_admin('admin','9800000001','YourStrong#Password','admin@mail.com');</code> — never hard-code admin credentials in frontend code.</p></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="admModalBack" hidden></div>
+<div class="modal" id="admModal" hidden><div class="modal-head"><h3 id="admModalTitle"></h3><button class="icon-btn" id="admModalClose"><i data-lucide="x"></i></button></div><div class="modal-body" id="admModalBody"></div></div>
+<div id="toastRoot"></div>
+
+<script src="admin.js"></script>
+</body>
+</html>
